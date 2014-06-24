@@ -52,7 +52,13 @@ sub sync_ldap {
     my $base_dn = Bugzilla->params->{"LDAPBaseDN"};
 
     # Search for members of the LDAP group.
+	# Change this to look return all uniquenames
     my $filter = "memberof=" . $group->ldap_dn;
+	#my $base_group_dn = $group->ldap_dn;
+	#if ($group->ldap_dn =~ /\,(.*)?/) {
+	#	$base_group_dn = $1;
+	#}
+	#my $filter = "(&(objectclass=groupOfUniqueNames))";
     my @attrs = ($mail_attr);
     my $dn_result = $ldap->search(( base   => $base_dn,
                                     scope  => 'sub',
@@ -65,6 +71,9 @@ sub sync_ldap {
     my @group_members;
     push @group_members, $_->get_value('mail') foreach $dn_result->entries;
 
+	#my $infoString = "Blah Blah Blah!";
+	#ThrowCodeError('ldap_search_error', { errstr => $infoString, username => $base_group_dn });
+	
     my $users = Bugzilla->dbh->selectall_hashref(
         "SELECT userid, group_id, login_name
          FROM profiles

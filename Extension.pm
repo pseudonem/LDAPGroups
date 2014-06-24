@@ -68,12 +68,12 @@ sub _bugzilla_ldap {
 
 sub _create_or_update_user {
     my ($self, $params) = @_;
-    my $dbh = Bugzilla->dbh;
-    
+	
+	my $dbh = Bugzilla->dbh;
+	
     my $result = $self->_orig_create_or_update_user($params);
 
     if (exists $params->{ldap_group_dns}) {
-       
         my $sth_add_mapping = $dbh->prepare(
             qq{INSERT INTO user_group_map
                  (user_id, group_id, isbless, grant_type)
@@ -125,6 +125,8 @@ sub install_update_db {
 
     $dbh->bz_add_column('groups', 'ldap_dn',
         { TYPE => 'MEDIUMTEXT', DEFAULT => "''" });
+	$dbh->bz_add_column('groups', 'ldap_group_base_dn',
+		{ TYPE => 'MEDIUMTEXT', DEFAULT => "''" });
 }
 
 sub auth_verify_methods {
