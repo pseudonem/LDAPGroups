@@ -35,6 +35,7 @@ sub _ldap_member_of_groups {
 
     my $uid_attr = Bugzilla->params->{"LDAPuidattribute"};
     my $base_dn = Bugzilla->params->{"LDAPBaseDN"};
+	my $base_group_dn = Bugzilla->params->{"LDAPgroupbaseDN"};
 	
 	# Get the user's cn so we can build the dn. This
 	# is probably a stupid way to do things. -Dave 06/24/2014
@@ -56,7 +57,7 @@ sub _ldap_member_of_groups {
 	
 	my $user_dn = "cn=" . $dn_user_result->entry->get_value('cn') . ',' . $base_dn;
 	
-	my $base_group_dn = "ou=crews,ou=groups,o=sevenSeas";
+	
     my $dn_result = $self->ldap->search( base   => $base_group_dn,
                                           scope  => 'sub',
                                           filter => "(&(objectclass=groupOfUniqueNames) (uniquemember=$user_dn))" );
@@ -72,7 +73,7 @@ sub _ldap_member_of_groups {
 	#my $infoString = "uid:".$uid." uid_attr:".$uid_attr." user_dn:".$user_dn." base_dn:".$base_dn.
 	#				 "\ndn_user_result->count:".$dn_user_result->count." dn_result->count:".$dn_result->count.
 	#				 "\n".join(",",@ldap_group_dns);
-    
+
 	#ThrowCodeError('ldap_search_error', { errstr => $infoString, username => $uid });
     return \@ldap_group_dns;
 }
