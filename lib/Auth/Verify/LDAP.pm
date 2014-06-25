@@ -27,7 +27,8 @@ sub check_credentials {
 
 sub _ldap_member_of_groups {
     my ($self, $uid) = @_;
-	
+    
+	# Only take the first portion of $uid. It is the email right now. :(
 	if ($uid =~ m/(.*?)\@/) {
 		$uid = $1;
 	}
@@ -49,14 +50,7 @@ sub _ldap_member_of_groups {
 			{ errstr => $dn_user_result->error, username => $uid });
 	}
 	
-	my $entry = $dn_user_result->entry;
-	
-	# TODO - Delete this array, it is pointless - Dave
-	#my @arr;
-	#push @arr, $_->get_value("cn") for $dn_user_result->entries;
-	
 	my $user_dn = "cn=" . $dn_user_result->entry->get_value('cn') . ',' . $base_dn;
-	
 	
     my $dn_result = $self->ldap->search( base   => $base_group_dn,
                                           scope  => 'sub',
@@ -68,7 +62,8 @@ sub _ldap_member_of_groups {
     }
 	
 	my @ldap_group_dns;
-    push @ldap_group_dns, "cn=".$_->get_value('cn').",".$base_group_dn for $dn_result->entries;
+	#.",".$base_group_dn
+    push @ldap_group_dns, "cn=".$_->get_value('cn') for $dn_result->entries;
 	
 	#my $infoString = "uid:".$uid." uid_attr:".$uid_attr." user_dn:".$user_dn." base_dn:".$base_dn.
 	#				 "\ndn_user_result->count:".$dn_user_result->count." dn_result->count:".$dn_result->count.

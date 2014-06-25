@@ -53,28 +53,46 @@ sub sync_ldap {
 
     # Search for members of the LDAP group.
 	# Change this to look return all uniquenames
-    my $filter = "memberof=" . $group->ldap_dn;
-	#my $base_group_dn = $group->ldap_dn;
+    #my $filter = "memberof=" . $group->ldap_dn;
+    my $group_dn = $group->ldap_dn;
+	my $ldap_group_base_dn = Bugzilla->params->{"LDAPgroupbaseDN"};
 	#if ($group->ldap_dn =~ /\,(.*)?/) {
 	#	$base_group_dn = $1;
 	#}
-	#my $filter = "(&(objectclass=groupOfUniqueNames))";
-    my @attrs = ($mail_attr);
-    my $dn_result = $ldap->search(( base   => $base_dn,
+	my $filter = "(&($group_dn))";
+    my @attrs = ("*");
+    my $dn_result = $ldap->search(( base   => $ldap_group_base_dn,
                                     scope  => 'sub',
-                                    filter => $filter ), attrs => \@attrs);
+                                    filter => $filter ), 
+                                    attrs => \@attrs);
     if ($dn_result->code) {
         ThrowCodeError('ldap_search_error',
             { errstr => $dn_result->error, username => $group->name });
     }
 
-    my @group_members;
-    push @group_members, $_->get_value('mail') foreach $dn_result->entries;
+    my @group_member_dns;
+    push @group_member_dns, $_->get_value('uniquemember') foreach $dn_result->entries;
 
-	#my $infoString = "Blah Blah Blah!";
-	#ThrowCodeError('ldap_search_error', { errstr => $infoString, username => $base_group_dn });
-	
-    my $users = Bugzilla->dbh->selectall_hashref(
+	my @group_member_cns;
+	foreach my $member (@group_member_dns) {
+		push(@group_member_cns, substr($member, 0, index($member, ',')));
+	}
+
+	my @group_members;
+	@attrs = ("mail");
+	foreach my $member_cn (@group_member_cns) {
+		my $mail_result = $ldap->search(( base   => $base_dn,
+										  scope  => "sub",
+										  filter => "(&($member_cn))"),
+										  attrs  => \@attrs);
+		push @group_members, $_->get_value('mail') foreach $mail_result->entries;
+		if ($mail_result->code) {
+        	ThrowCodeError('ldap_search_error',
+           		{ errstr => $mail_result->error, username => $member_cn });
+    	}
+	}
+
+	my $users = Bugzilla->dbh->selectall_hashref(
         "SELECT userid, group_id, login_name
          FROM profiles
          LEFT JOIN user_group_map
@@ -107,6 +125,9 @@ sub sync_ldap {
     $sth_add->execute($_, $group->id, Bugzilla::Extension::LDAPGroups->GRANT_LDAP) foreach @added;
     $sth_del->execute($_, $group->id, Bugzilla::Extension::LDAPGroups->GRANT_LDAP) foreach @removed;
 
+	#my $infoString = join(",", @added);
+	#ThrowCodeError('ldap_search_error', { errstr => $infoString, username => "At End of Sync!" });
+ 
     return { added => \@added, removed => \@removed };
 }
 

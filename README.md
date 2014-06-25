@@ -38,5 +38,3 @@ Example:
 
     # numResponses: 2
     # numEntries: 1
-
-## Adding this line to test git.
