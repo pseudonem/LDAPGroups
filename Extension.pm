@@ -209,6 +209,20 @@ sub group_end_of_update {
     sync_ldap($group) if $group->ldap_dn;
 }
 
+sub config_modify_panels {
+    my ($self, $args) = @_;
+    
+    my $panels = $args->{panels};
+    
+    # Add the "LDAPgroupbaseDN" parameter to the ldap page.
+    my $auth_params = $panels->{'ldap'}->{params};
+
+    push(@$auth_params, { name => 'LDAPgroupbaseDN',
+                          type => 't',
+                          default => ''
+                        });    
+}
+
 
 
 __PACKAGE__->NAME;
