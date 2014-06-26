@@ -50,17 +50,13 @@ sub sync_ldap {
 
     my $mail_attr = Bugzilla->params->{"LDAPmailattribute"};
     my $base_dn = Bugzilla->params->{"LDAPBaseDN"};
-
-    # Search for members of the LDAP group.
-	# Change this to look return all uniquenames
-    #my $filter = "memberof=" . $group->ldap_dn;
-    my $group_dn = $group->ldap_dn;
 	my $ldap_group_base_dn = Bugzilla->params->{"LDAPgroupbaseDN"};
-	#if ($group->ldap_dn =~ /\,(.*)?/) {
-	#	$base_group_dn = $1;
-	#}
-	my $filter = "(&($group_dn))";
-    my @attrs = ("*");
+	my $uid_attr = Bugzilla->params->{"LDAPuidattribute"};
+	my $group_dn = $group->ldap_dn;
+	
+    # Search for members of the LDAP group.
+    my $filter = "(&($group_dn))";
+    my @attrs = ("$uid_attr");
     my $dn_result = $ldap->search(( base   => $ldap_group_base_dn,
                                     scope  => 'sub',
                                     filter => $filter ), 
@@ -70,25 +66,20 @@ sub sync_ldap {
             { errstr => $dn_result->error, username => $group->name });
     }
 
-    my @group_member_dns;
-    push @group_member_dns, $_->get_value('uniquemember') foreach $dn_result->entries;
+    my @group_member_uids;
+    push @group_member_uids, $_->get_value($uid_attr) foreach $dn_result->entries;
 
-	my @group_member_cns;
-	foreach my $member (@group_member_dns) {
-		push(@group_member_cns, substr($member, 0, index($member, ',')));
-	}
-
-	my @group_members;
-	@attrs = ("mail");
-	foreach my $member_cn (@group_member_cns) {
+	my @group_member_emails;
+	@attrs = ("email");
+	foreach my $member_uid (@group_member_uids) {
 		my $mail_result = $ldap->search(( base   => $base_dn,
 										  scope  => "sub",
-										  filter => "(&($member_cn))"),
+										  filter => "(&($uid_attr=$member_uid))"),
 										  attrs  => \@attrs);
-		push @group_members, $_->get_value('mail') foreach $mail_result->entries;
+		push @group_member_emails, $_->get_value('mail') foreach $mail_result->entries;
 		if ($mail_result->code) {
         	ThrowCodeError('ldap_search_error',
-           		{ errstr => $mail_result->error, username => $member_cn });
+           		{ errstr => $mail_result->error, username => $member_uid });
     	}
 	}
 
@@ -108,14 +99,14 @@ sub sync_ldap {
     foreach my $user (values %$users) {
         # User is no longer member of the group.
         if (defined $user->{group_id}
-            and !grep { $_ eq $user->{login_name} } @group_members)
+            and !grep { $_ eq $user->{login_name} } @group_member_emails)
         {
             push @removed, $user->{userid};
         }
 
         # User has been added to the group.
         if (!defined $user->{group_id}
-            and grep { $_ eq $user->{login_name} } @group_members)
+            and grep { $_ eq $user->{login_name} } @group_member_emails)
         {
 
             push @added, $user->{userid};

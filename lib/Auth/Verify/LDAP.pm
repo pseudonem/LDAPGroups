@@ -40,21 +40,22 @@ sub _ldap_member_of_groups {
 	
 	# Get the user's cn so we can build the dn. This
 	# is probably a stupid way to do things. -Dave 06/24/2014
-	my $dn_user_result = $self->ldap->search(( base   => $base_dn,
-											   scope  => 'sub',
-										       filter => "$uid_attr=$uid"),
-											   attrs => ['*']
-										    );
-	if ($dn_user_result->code) {
-		ThrowCodeError('ldap_search_error',
-			{ errstr => $dn_user_result->error, username => $uid });
-	}
+	#my $dn_user_result = $self->ldap->search(( base   => $base_dn,
+	#										   scope  => 'sub',
+	#									       filter => "$uid_attr=$uid"),
+	#										   attrs => ['*']
+	#									    );
+	#if ($dn_user_result->code) {
+	#	ThrowCodeError('ldap_search_error',
+	#		{ errstr => $dn_user_result->error, username => $uid });
+	#}
 	
-	my $user_dn = "cn=" . $dn_user_result->entry->get_value('cn') . ',' . $base_dn;
-	
-    my $dn_result = $self->ldap->search( base   => $base_group_dn,
+	#my $user_dn = "cn=" . $dn_user_result->entry->get_value('cn') . ',' . $base_dn;
+	my @attrs = ('gid');
+    my $dn_result = $self->ldap->search(( base   => $base_group_dn,
                                           scope  => 'sub',
-                                          filter => "(&(objectclass=groupOfUniqueNames) (uniquemember=$user_dn))" );
+                                          filter => "(&(objectclass=caegroup) (uid=$uid))"),
+                                          attrs => \@attrs );
 
     if ($dn_result->code) {
         ThrowCodeError('ldap_search_error',
@@ -62,11 +63,10 @@ sub _ldap_member_of_groups {
     }
 	
 	my @ldap_group_dns;
-	#.",".$base_group_dn
-    push @ldap_group_dns, "cn=".$_->get_value('cn') for $dn_result->entries;
+    push @ldap_group_dns, "gid=".$_->get_value('gid') for $dn_result->entries;
 	
-	#my $infoString = "uid:".$uid." uid_attr:".$uid_attr." user_dn:".$user_dn." base_dn:".$base_dn.
-	#				 "\ndn_user_result->count:".$dn_user_result->count." dn_result->count:".$dn_result->count.
+	#my $infoString = "uid:".$uid." uid_attr:".$uid_attr." base_dn:".$base_dn." base_group_dn:".$base_group_dn.
+	#				 "\ndn_result->count:".$dn_result->count.
 	#				 "\n".join(",",@ldap_group_dns);
 
 	#ThrowCodeError('ldap_search_error', { errstr => $infoString, username => $uid });

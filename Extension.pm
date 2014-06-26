@@ -125,8 +125,6 @@ sub install_update_db {
 
     $dbh->bz_add_column('groups', 'ldap_dn',
         { TYPE => 'MEDIUMTEXT', DEFAULT => "''" });
-	$dbh->bz_add_column('groups', 'ldap_group_base_dn',
-		{ TYPE => 'MEDIUMTEXT', DEFAULT => "''" });
 }
 
 sub auth_verify_methods {
