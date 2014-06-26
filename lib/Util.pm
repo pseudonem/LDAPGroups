@@ -52,6 +52,7 @@ sub sync_ldap {
     my $base_dn = Bugzilla->params->{"LDAPBaseDN"};
 	my $ldap_group_base_dn = Bugzilla->params->{"LDAPgroupbaseDN"};
 	my $uid_attr = Bugzilla->params->{"LDAPuidattribute"};
+	
 	my $group_dn = $group->ldap_dn;
 	
     # Search for members of the LDAP group.
@@ -70,13 +71,13 @@ sub sync_ldap {
     push @group_member_uids, $_->get_value($uid_attr) foreach $dn_result->entries;
 
 	my @group_member_emails;
-	@attrs = ("email");
+	@attrs = Bugzilla->params->{"LDAPmailattribute"};
 	foreach my $member_uid (@group_member_uids) {
 		my $mail_result = $ldap->search(( base   => $base_dn,
 										  scope  => "sub",
 										  filter => "(&($uid_attr=$member_uid))"),
 										  attrs  => \@attrs);
-		push @group_member_emails, $_->get_value('mail') foreach $mail_result->entries;
+		push @group_member_emails, $_->get_value($mail_attr) foreach $mail_result->entries;
 		if ($mail_result->code) {
         	ThrowCodeError('ldap_search_error',
            		{ errstr => $mail_result->error, username => $member_uid });

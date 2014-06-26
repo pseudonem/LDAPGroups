@@ -213,12 +213,17 @@ sub config_modify_panels {
     my $panels = $args->{panels};
     
     # Add the "LDAPgroupbaseDN" parameter to the ldap page.
+    # Add the "LDAPgidattribute" parameter to the ldap page.
     my $auth_params = $panels->{'ldap'}->{params};
 
     push(@$auth_params, { name => 'LDAPgroupbaseDN',
                           type => 't',
                           default => ''
-                        });    
+                        });
+   	push(@$auth_params, { name => 'LDAPgidattribute',
+   						  type => 't',
+   						  default => ''
+   						});    
 }
 
 

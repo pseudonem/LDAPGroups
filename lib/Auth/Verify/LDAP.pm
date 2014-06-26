@@ -26,35 +26,25 @@ sub check_credentials {
 }
 
 sub _ldap_member_of_groups {
-    my ($self, $uid) = @_;
+    my ($self, $email) = @_;
+    
+    $email = escape_filter_value($email);
     
 	# Only take the first portion of $uid. It is the email right now. :(
-	if ($uid =~ m/(.*?)\@/) {
+	my $uid;
+	if ($email =~ m/(.*?)\@/) {
 		$uid = $1;
 	}
-    $uid = escape_filter_value($uid);
-
-    my $uid_attr = Bugzilla->params->{"LDAPuidattribute"};
+    
     my $base_dn = Bugzilla->params->{"LDAPBaseDN"};
 	my $base_group_dn = Bugzilla->params->{"LDAPgroupbaseDN"};
-	
-	# Get the user's cn so we can build the dn. This
-	# is probably a stupid way to do things. -Dave 06/24/2014
-	#my $dn_user_result = $self->ldap->search(( base   => $base_dn,
-	#										   scope  => 'sub',
-	#									       filter => "$uid_attr=$uid"),
-	#										   attrs => ['*']
-	#									    );
-	#if ($dn_user_result->code) {
-	#	ThrowCodeError('ldap_search_error',
-	#		{ errstr => $dn_user_result->error, username => $uid });
-	#}
-	
-	#my $user_dn = "cn=" . $dn_user_result->entry->get_value('cn') . ',' . $base_dn;
-	my @attrs = ('gid');
+	my $uid_attr = Bugzilla->params->{"LDAPuidattribute"};
+	my $gid_attr = Bugzilla->params->{"LDAPgidattribute"};
+	# I don't understand references... so yeah, this works and I'm sure its dumb.
+	my @attrs = ($gid_attr);
     my $dn_result = $self->ldap->search(( base   => $base_group_dn,
                                           scope  => 'sub',
-                                          filter => "(&(objectclass=caegroup) (uid=$uid))"),
+                                          filter => "(&($uid_attr=$uid))"),
                                           attrs => \@attrs );
 
     if ($dn_result->code) {
@@ -63,7 +53,7 @@ sub _ldap_member_of_groups {
     }
 	
 	my @ldap_group_dns;
-    push @ldap_group_dns, "gid=".$_->get_value('gid') for $dn_result->entries;
+    push @ldap_group_dns, $gid_attr."=".$_->get_value($gid_attr) for $dn_result->entries;
 	
 	#my $infoString = "uid:".$uid." uid_attr:".$uid_attr." base_dn:".$base_dn." base_group_dn:".$base_group_dn.
 	#				 "\ndn_result->count:".$dn_result->count.
