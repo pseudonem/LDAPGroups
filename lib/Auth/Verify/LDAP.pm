@@ -29,19 +29,22 @@ sub _ldap_member_of_groups {
     my ($self, $email) = @_;
     
     $email = escape_filter_value($email);
-    
-	# Only take the first portion of $uid. It is the email right now. :(
-	my $uid;
-	if ($email =~ m/(.*?)\@/) {
-		$uid = $1;
-	}
-    
-    my $base_dn = Bugzilla->params->{"LDAPBaseDN"};
-	my $base_group_dn = Bugzilla->params->{"LDAPgroupbaseDN"};
+	
+	my $base_dn = Bugzilla->params->{"LDAPBaseDN"};
 	my $uid_attr = Bugzilla->params->{"LDAPuidattribute"};
+	my $mail_attr = Bugzilla->params->{"LDAPmailattribute"};
+	my @attrs = ($uid_attr);
+	my $mail_result = $self->ldap->search(( base   => $base_dn,
+								      scope  => "sub",
+									  filter => "(&($mail_attr=$email))"),
+									  attrs  => \@attrs);
+									  
+	my $uid =  $mail_result->entry->get_value($uid_attr);
+    
+	my $base_group_dn = Bugzilla->params->{"LDAPgroupbaseDN"};
 	my $gid_attr = Bugzilla->params->{"LDAPgidattribute"};
 	# I don't understand references... so yeah, this works and I'm sure its dumb.
-	my @attrs = ($gid_attr);
+	@attrs = ($gid_attr);
     my $dn_result = $self->ldap->search(( base   => $base_group_dn,
                                           scope  => 'sub',
                                           filter => "(&($uid_attr=$uid))"),
